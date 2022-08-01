@@ -1,0 +1,20 @@
+{
+  "name": "kh2-server",
+  "version": "0.1.0",
+  "description": "Websocket server for KH2 randomizer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhobz/kh2-server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jhobz/kh2-server/issues"
+  },
+  "homepage": "https://github.com/jhobz/kh2-server#readme"
+}
