@@ -7,7 +7,7 @@ const config: Config.InitialOptions = {
 //       useESM: true,
 //     },
 //   },
-  verbose: true,
+  // verbose: true,
   transform: {
     '^.+\\.ts?$': 'ts-jest',
   },

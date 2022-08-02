@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "description": "Websocket server for KH2 randomizer",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node index.js",
     "build": "tsc",
-    "test": "jest --watchAll --verbose",
+    "test": "jest",
+    "test-dev": "jest --watchAll --verbose",
     "watch": "tsc --watch"
   },
   "repository": {
