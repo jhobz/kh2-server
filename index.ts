@@ -17,6 +17,20 @@ server.on('connection', socket => {
     })
 })
 
+export interface Message {
+    type: 'MULTI' | 'OTHER' // 'OTHER' is yet to be implemented
+    action: 'AUTH' | 'JOIN_ROOM' | 'LEAVE_ROOM' | 'CREATE_ROOM' | 'ITEM'
+    data: MessageData
+}
+
+export interface MessageData {
+    playerId?: number
+    item?: string
+    location?: string
+    roomId?: string
+    message?: string
+}
+
 // app.get('/', (req, res) => {
 
 // })

@@ -11,7 +11,8 @@ const config: Config.InitialOptions = {
   transform: {
     '^.+\\.ts?$': 'ts-jest',
   },
-  transformIgnorePatterns: ["node_modules/(?!nanoid)"]
+  transformIgnorePatterns: ["node_modules/(?!nanoid)"],
+  rootDir: "."
 }
 
 export default config
