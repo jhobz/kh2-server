@@ -4,9 +4,13 @@
     </head>
     <body>
         <h1>Multiworld</h1>
-        <label>Currently in room: </label><input type="text" disabled id="currentRoom" value="NONE"><br>
-        <button id="createRoom">Create room</button><br>
-        <input type="text" name="room" id="newRoom" placeholder="Room ID">
-        <button id="joinRoom">Join room</button>
+        <label>Currently in room: </label><input type="text" disabled id="currentRoom" value="NONE"><br><br>
+        <input type="number" name="playerId" id="playerId" placeholder="Player ID">
+        <button id="authorize">Connect</button><br><br>
+        <hr>
+        <button id="createRoom" disabled>Create room</button><br>
+        <p>OR</p>
+        <input type="text" name="room" id="newRoom" placeholder="Room ID" disabled>
+        <button id="joinRoom" disabled>Join room</button>
     </body>
 </html>

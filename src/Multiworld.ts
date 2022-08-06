@@ -1,9 +1,6 @@
-import { customAlphabet } from 'nanoid'
-import { nolookalikesSafe } from 'nanoid-dictionary'
 import { WebSocket } from 'ws'
-import { Message } from '../index'
-
-const generateId = customAlphabet(nolookalikesSafe, 6)
+import { Message } from './index.js'
+import { Room, Client } from './Room.js'
 
 export class Multiworld {
     maxClients: number
@@ -17,7 +14,7 @@ export class Multiworld {
         this.connectedClients = []
     }
 
-    authenticateClient(message: Message, socket: WebSocket) {
+    authenticateClient(message: Message, socket: WebSocket): Message {
         if (!message.data.hasOwnProperty('playerId')) {
             throw new Error('Could not authenticate client. A playerId is required.')
         }
@@ -26,59 +23,150 @@ export class Multiworld {
             throw new Error('Could not authenticate client. The \'playerId\' field is not a number.')
         }
 
-        this.connectedClients.push({ playerId: message.data.playerId, socket })
-        socket.send({ type: 'MULTI', action: 'AUTH', data: { message: 'Client successfully authenticated.' } })
+        const client = { playerId: message.data.playerId, socket }
+        this.connectedClients.push(client)
+        return {
+            type: 'MULTI',
+            action: 'LOGIN',
+            data: {
+                message: 'Client successfully authenticated.',
+                client
+            }
+        }
     }
 
-    createRoom(client: Client) {
+    createRoom(client: Client): Message {
         const room = new Room([client]) 
         this.rooms[room.id] = room
+        client.roomId = room.id
+        
+        return {
+            type: 'MULTI',
+            action: 'CREATE_ROOM',
+            data: {
+                message: `Room '${room.id}' created successfully.`,
+                client
+            }
+        }
     }
 
-    joinRoom(roomId: string, client: Client) {
-        if(client.roomId) {
+    joinRoom(roomId: string, client: Client): Message {
+        if (!Object.keys(this.rooms).includes(roomId)) {
+            return {
+                type: 'MULTI',
+                action: 'JOIN_ROOM',
+                data: {
+                    error: true,
+                    message: `Unable to join room. ${roomId ? `Room '${roomId}' does not exist.` : 'No roomId provided.'}`,
+                }
+            }
+        }
+
+        if (client.roomId) {
             this.leaveRoom(client.roomId, client)
         }
-        client.roomId = this.rooms[roomId].add(client)
+
+        try {
+            client.roomId = this.rooms[roomId].add(client)
+        } catch (e: any) {
+            return {
+                type: 'MULTI',
+                action: 'JOIN_ROOM',
+                data: {
+                    error: true,
+                    message: 'Unable to join room. ' + e.message
+                }
+            }
+        }
+        
+        return {
+            type: 'MULTI',
+            action: 'JOIN_ROOM',
+            data: {
+                message: `Room '${roomId}' joined successfully.`,
+                client
+            }
+        }
     }
 
-    leaveRoom(roomId: string, client: Client) {
-        this.rooms[roomId].remove(client)
-    }
-}
-
-export class Room {
-    id: string
-    maxClients: number | undefined
-    clients: Client[]
-
-    constructor(initialClients: Client[], maxClients?: number) {
-        this.id = generateId()
-        this.clients = initialClients || []
-        this.maxClients = maxClients
-    }
-
-    add(client: Client) {
-        if (this.clients.includes(client) || this.clients.find(value => value.playerId === client.playerId)) {
-            throw new Error('Could not join room. Client with this playerId already exists in room.')
+    leaveRoom(roomId: string, client: Client): Message {
+        if (!client.roomId) {
+            return {
+                type: 'MULTI',
+                action: 'LEAVE_ROOM',
+                data: {
+                    error: true,
+                    message: 'Unable to leave room. User is not in a room.',
+                }
+            }
         }
 
-        this.clients.push(client)
-        return this.id
-    }
-
-    remove(client: Client) {
-        if (!this.clients.includes(client)) {
-            throw new Error('Could not leave room. Client is not in room.')
+        if (!Object.keys(this.rooms).includes(roomId)) {
+            return {
+                type: 'MULTI',
+                action: 'LEAVE_ROOM',
+                data: {
+                    error: true,
+                    message: `Unable to leave room. ${roomId ? `User is not in room '${roomId}'.` : 'No roomId provided.'}`,
+                }
+            }
         }
 
-        const index = this.clients.findIndex(value => value.playerId === client.playerId )
-        this.clients.splice(index, 1)
-    }
-}
+        try {
+            this.rooms[roomId].remove(client)
+            delete client.roomId
 
-export interface Client {
-    playerId: number
-    socket?: WebSocket
-    roomId?: string
+            if (this.rooms[roomId].clients.length === 0) {
+                delete this.rooms[roomId]
+            }
+        } catch (e: any) {
+            return {
+                type: 'MULTI',
+                action: 'LEAVE_ROOM',
+                data: {
+                    error: true,
+                    message: 'Unable to leave room. ' + e.message
+                }
+            }
+        }
+
+        return {
+            type: 'MULTI',
+            action: 'LEAVE_ROOM',
+            data: {
+                message: `Room '${roomId}' left successfully.`
+            }
+        }
+    }
+
+    removeClient(client: Client): Message {
+        console.log(this.connectedClients)
+        if (!this.connectedClients.includes(client)) {
+            return {
+                type: 'MULTI',
+                action: 'LOGOUT',
+                data: {
+                    error: true,
+                    message: 'User not in list of connected clients.'
+                }
+            }
+        }
+
+        if (client.roomId) {
+            const result = this.leaveRoom(client.roomId, client)
+            if (result.data.error) {
+                return result
+            }
+        }
+
+        this.connectedClients.splice(this.connectedClients.indexOf(client), 1)
+
+        return {
+            type: 'MULTI',
+            action: 'LOGOUT',
+            data: {
+                message: 'User disconnected successfully.'
+            }
+        }
+    }
 }
