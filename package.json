@@ -2,7 +2,7 @@
   "name": "kh2-server",
   "version": "0.1.0",
   "description": "Websocket server for KH2 randomizer",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "type": "module",
   "scripts": {
     "start": "nodemon dist/index.js",

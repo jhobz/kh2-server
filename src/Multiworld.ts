@@ -140,7 +140,6 @@ export class Multiworld {
     }
 
     removeClient(client: Client): Message {
-        console.log(this.connectedClients)
         if (!this.connectedClients.includes(client)) {
             return {
                 type: 'MULTI',
