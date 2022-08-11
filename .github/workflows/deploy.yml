@@ -33,10 +33,13 @@ jobs:
     needs: build
     steps:
       - name: Deploy Node.js app
-        uses: easingthemes/ssh-deploy@v2.2.11
+        uses: appleboy/ssh-action@v0.1.5
         with:
-          SSH_PRIVATE_KEY: ${{ SSH_KEY }}
-          REMOTE_HOST: ${{ SSH_HOST }}
-          REMOTE_USER: ${{ SSH_USER }}
-          SOURCE: 'dist/'
-          
+          key: ${{ secrets.SSH_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          script: |
+            git clone git@github.com:jhobz/kh2-server.git
+            npm i --production
+            npm run build
+            pm2 restart "KH2 Server"
