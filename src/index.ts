@@ -42,7 +42,7 @@ function handleMessage(message: Message, socket: WebSocket): Message {
 
     switch (message.action) {
         case 'LOGIN':
-            return mw.authenticateClient(message, socket)
+            return mw.authenticateClient(message)
         case 'LOGOUT':
             return mw.removeClient(message.data.client as Client)
         case 'CREATE_ROOM':

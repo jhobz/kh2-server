@@ -17,7 +17,7 @@ export class Room {
     }
 
     add(client: Client) {
-        if (this.clients.includes(client) || this.clients.find(value => value.playerId === client.playerId)) {
+        if (this.containsClient(client) || this.clients.find(value => value.playerId === client.playerId)) {
             throw new Error('Client with same playerId already exists in room.')
         }
 
@@ -26,17 +26,21 @@ export class Room {
     }
 
     remove(client: Client) {
-        if (!this.clients.includes(client)) {
+        if (!this.containsClient(client)) {
             throw new Error('Client is not in room.')
         }
 
         const index = this.clients.findIndex(value => value.playerId === client.playerId )
         this.clients.splice(index, 1)
     }
+
+    containsClient(client: Client) {
+        return this.clients.find(c => c.clientId === client.clientId)
+    }
 }
 
 export interface Client {
+    clientId: string
     playerId: number
-    socket: WebSocket
     roomId?: string
 }
