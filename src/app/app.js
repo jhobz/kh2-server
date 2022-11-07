@@ -28,8 +28,21 @@ socket.onmessage = ({ data }) => {
         return
     }
 
+    if (message.action === 'LOGOUT') {
+        $.playerIdInput.disabled = false
+        $.connectionButton.innerHTML = 'Connect'
+        $.createRoomButton.disabled = true
+        $.joinRoomButton.disabled = true
+        $.newRoomInput.disabled = true
+    }
+
     if (message.data.client) {
         client = message.data.client
+        if (client.roomId) {
+            $.currentRoomInput.value = client.roomId
+        } else {
+            $.currentRoomInput.value = 'NONE'
+        }
 
         if (message.action === 'LOGIN') {
             $.playerIdInput.disabled = true
@@ -39,28 +52,12 @@ socket.onmessage = ({ data }) => {
             $.newRoomInput.disabled = false
         }
 
-        if (message.action === 'LOGOUT') {
-            $.playerIdInput.disabled = false
-            $.connectionButton.innerHTML = 'Connect'
-            $.createRoomButton.disabled = true
-            $.joinRoomButton.disabled = true
-            $.newRoomInput.disabled = true
-        }
-
-        if (message.action === 'CREATE_ROOM') {
+        if (message.action === 'CREATE_ROOM' || message.action === 'JOIN_ROOM') {
             $.createRoomButton.innerHTML = 'Leave room'
         }
 
         if (message.action === 'LEAVE_ROOM') {
             $.createRoomButton.innerHTML = 'Create room'
-        }
-
-        if (message.data.client.roomId && message.data.client.roomId !== $.currentRoomInput.value) {
-            if (message.data.client.roomId) {
-                $.currentRoomInput.value = message.data.client.roomId
-            } else {
-                $.currentRoomInput.value = 'NONE'
-            }
         }
     }
 }
@@ -95,7 +92,6 @@ $.createRoomButton.onclick = (ev) => {
     if (ev.target.innerHTML === 'Leave room') {
         data.action = 'LEAVE_ROOM'
         data.data.client = client
-        delete data.data.playerId
     }
     sendToServer(data)
 }
@@ -105,7 +101,8 @@ $.joinRoomButton.onclick = () => {
         type: 'MULTI',
         action: 'JOIN_ROOM',
         data: {
-            roomId: $.newRoomInput.value
+            roomId: $.newRoomInput.value,
+            client
         }
     }
     sendToServer(data)

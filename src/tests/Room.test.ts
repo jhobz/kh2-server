@@ -7,7 +7,7 @@ describe('Room', () => {
     let defaultClient: Client
 
     beforeEach(() => {
-        defaultClient = { playerId: 0, socket: new WebSocket('') }
+        defaultClient = { clientId: 'a', playerId: 0 }
     })
 
     describe('constructor()', () => {
@@ -26,7 +26,7 @@ describe('Room', () => {
         })
 
         it('should add a client to an existing room', () => {
-            const client = { playerId: 1, socket: new WebSocket('') }
+            const client = { clientId: 'b', playerId: 1 }
             room.add(client)
             expect(room.clients).toContainEqual(client)
         })
@@ -36,13 +36,13 @@ describe('Room', () => {
             expect(room.clients).toHaveLength(1)
         })
 
-        it('should prevent a client with the same id of another client in the room from joining', () => {
-            expect(() => { room.add({ playerId: 0, socket: new WebSocket('') }) }).toThrowError('Client with same playerId already exists in room.')
+        it('should prevent a client with the same playerId of another client in the room from joining', () => {
+            expect(() => { room.add({ clientId: 'b', playerId: 0 }) }).toThrowError('Client with same playerId already exists in room.')
             expect(room.clients).toHaveLength(1)
         })
 
         it('should return the room\'s id', () => {
-            const roomId = room.add({ playerId: 1, socket: new WebSocket('') })
+            const roomId = room.add({ clientId: 'b', playerId: 1 })
             expect(roomId).toBe(room.id)
         })
     })
@@ -52,7 +52,7 @@ describe('Room', () => {
         let secondClient: Client
 
         beforeEach(() => {
-            secondClient = { playerId: 1, socket: new WebSocket('') }
+            secondClient = { clientId: 'b', playerId: 1 }
             room = new Room([defaultClient, secondClient])
         })
 
@@ -63,7 +63,7 @@ describe('Room', () => {
         })
 
         it('should require exactly the same client for removal', () => {
-            expect(() => { room.remove({ playerId: 0, socket: new WebSocket('') }) }).toThrow('Client is not in room.')
+            expect(() => { room.remove({ clientId: 'c', playerId: 0 }) }).toThrow('Client is not in room.')
             expect(room.clients).toHaveLength(2)
             expect(room.clients).toContainEqual(defaultClient)
         })

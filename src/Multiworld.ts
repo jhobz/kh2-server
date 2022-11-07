@@ -1,6 +1,10 @@
-import { WebSocket } from 'ws'
 import { Message } from './index.js'
 import { Room, Client } from './Room.js'
+import { customAlphabet } from 'nanoid'
+import nanoidDict from 'nanoid-dictionary'
+const { nolookalikesSafe } = nanoidDict
+
+const generateId = customAlphabet(nolookalikesSafe, 6)
 
 export class Multiworld {
     maxClients: number
@@ -14,7 +18,7 @@ export class Multiworld {
         this.connectedClients = []
     }
 
-    authenticateClient(message: Message, socket: WebSocket): Message {
+    authenticateClient(message: Message): Message {
         if (!message.data.hasOwnProperty('playerId')) {
             throw new Error('Could not authenticate client. A playerId is required.')
         }
@@ -23,8 +27,10 @@ export class Multiworld {
             throw new Error('Could not authenticate client. The \'playerId\' field is not a number.')
         }
 
-        const client = { playerId: message.data.playerId, socket }
+        const client: any = { playerId: message.data.playerId }
+        client.clientId = generateId()
         this.connectedClients.push(client)
+
         return {
             type: 'MULTI',
             action: 'LOGIN',
@@ -45,6 +51,7 @@ export class Multiworld {
             action: 'CREATE_ROOM',
             data: {
                 message: `Room '${room.id}' created successfully.`,
+                roomId: room.id,
                 client
             }
         }
@@ -134,13 +141,14 @@ export class Multiworld {
             type: 'MULTI',
             action: 'LEAVE_ROOM',
             data: {
-                message: `Room '${roomId}' left successfully.`
+                message: `Room '${roomId}' left successfully.`,
+                client
             }
         }
     }
 
     removeClient(client: Client): Message {
-        if (!this.connectedClients.includes(client)) {
+        if (!this.hasClient(client)) {
             return {
                 type: 'MULTI',
                 action: 'LOGOUT',
@@ -158,7 +166,7 @@ export class Multiworld {
             }
         }
 
-        this.connectedClients.splice(this.connectedClients.indexOf(client), 1)
+        this.connectedClients.splice(this.connectedClients.indexOf(this.hasClient(client) as Client), 1)
 
         return {
             type: 'MULTI',
@@ -167,5 +175,9 @@ export class Multiworld {
                 message: 'User disconnected successfully.'
             }
         }
+    }
+
+    hasClient(client: Client): Client | undefined {
+        return this.connectedClients.find(c => c.clientId === client.clientId)
     }
 }
