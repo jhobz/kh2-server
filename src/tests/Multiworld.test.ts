@@ -74,16 +74,6 @@ describe('Multiworld', () => {
             expect(mw.connectedClients[0].clientId).not.toEqual('')
         })
 
-        it('should store the client in the list of connected clients', () => {
-            expect(mw.connectedClients).toHaveLength(0)
-            const response = mw.authenticateClient(message)
-            expect(mw.connectedClients).toHaveLength(1)
-            expect(mw.connectedClients).toContainEqual({
-                clientId: response.data.client?.clientId,
-                playerId: message.data.playerId
-            })
-        })
-
         it('should return a message on success', () => {
             const messageToClient = mw.authenticateClient(message)
             expect(messageToClient).toHaveProperty('type')
@@ -95,6 +85,16 @@ describe('Multiworld', () => {
             expect(messageToClient.data.message).toContain<string>('success')
             expect(messageToClient.data).toHaveProperty('client')
             expect(messageToClient.data.client).toHaveProperty('clientId')
+        })
+
+        it('should store the client in the list of connected clients', () => {
+            expect(mw.connectedClients).toHaveLength(0)
+            const response = mw.authenticateClient(message)
+            expect(mw.connectedClients).toHaveLength(1)
+            expect(mw.connectedClients).toContainEqual({
+                clientId: (response.data.client as Client).clientId,
+                playerId: message.data.playerId
+            })
         })
 
         it.todo('should not allow more clients than the maximum number')
