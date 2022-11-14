@@ -1,4 +1,4 @@
-const socket = new WebSocket('ws://localhost:3000')
+const socket = new WebSocket('ws://https://1cfd5925-d99a-4fb4-9f59-abfbbef2330e.k8s.ondigitalocean.com')
 const $ = {
     currentRoomInput: document.querySelector('#currentRoom'),
     newRoomInput: document.querySelector('#newRoom'),
