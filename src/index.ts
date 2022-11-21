@@ -1,6 +1,6 @@
 // import express from 'express'
 import WebSocket, { WebSocketServer } from 'ws'
-import { Client } from './Room.js'
+import { Client } from './Client.js'
 import { Multiworld } from './Multiworld.js'
 import { MultiMap } from './types/MultiMap.js'
 import ajv from 'ajv'
@@ -47,7 +47,7 @@ function handleMessage(message: Message, socket: WebSocket): Message {
 
     switch (message.action) {
         case 'LOGIN':
-            return mw.authenticateClient(message)
+            return mw.authenticateClient(message, socket)
         case 'LOGOUT':
             return mw.removeClient(message.data.client as Client)
         case 'CREATE_ROOM':

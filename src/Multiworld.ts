@@ -1,11 +1,8 @@
+import { WebSocket } from 'ws'
+import { Client } from './Client.js'
 import { Message } from './index.js'
-import { Room, Client } from './Room.js'
-import { customAlphabet } from 'nanoid'
-import nanoidDict from 'nanoid-dictionary'
+import { Room } from './Room.js'
 import { MultiMap } from './types/MultiMap.js'
-const { nolookalikesSafe } = nanoidDict
-
-const generateId = customAlphabet(nolookalikesSafe, 6)
 
 export class Multiworld {
     maxClients: number
@@ -19,7 +16,7 @@ export class Multiworld {
         this.connectedClients = []
     }
 
-    authenticateClient(message: Message): Message {
+    authenticateClient(message: Message, socket: WebSocket): Message {
         if (!message.data.hasOwnProperty('playerId')) {
             throw new Error('Could not authenticate client. A playerId is required.')
         }
@@ -28,8 +25,8 @@ export class Multiworld {
             throw new Error('Could not authenticate client. The \'playerId\' field is not a number.')
         }
 
-        const client: any = { playerId: message.data.playerId }
-        client.clientId = generateId()
+        // const client: any = { playerId: message.data.playerId }
+        const client = new Client(message.data.playerId, socket)
         this.connectedClients.push(client)
 
         return {

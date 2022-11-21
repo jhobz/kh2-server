@@ -1,5 +1,6 @@
 import { customAlphabet } from 'nanoid'
 import nanoidDict from 'nanoid-dictionary'
+import { Client } from './Client.js'
 import { MultiMap } from './types/MultiMap.js'
 const { nolookalikesSafe } = nanoidDict
 
@@ -42,10 +43,4 @@ export class Room {
     setMultiMap(multiMap: MultiMap) {
         this.multiMap = multiMap
     }
-}
-
-export interface Client {
-    clientId: string
-    playerId: number
-    roomId?: string
 }
