@@ -1,6 +1,8 @@
 import { customAlphabet } from 'nanoid'
 import nanoidDict from 'nanoid-dictionary'
 import { Client } from './Client.js'
+import { Message } from './index.js'
+import { KH2ItemMessage } from './types/KH2ItemMessage.js'
 import { MultiMap } from './types/MultiMap.js'
 const { nolookalikesSafe } = nanoidDict
 
@@ -40,7 +42,38 @@ export class Room {
         return this.clients.find(c => c.clientId === client.clientId)
     }
 
+
+    // Multiworld item stuff ----------------
+
     setMultiMap(multiMap: MultiMap) {
         this.multiMap = multiMap
+    }
+
+    getItemInfo(location: string, playerId: number): KH2ItemMessage {
+        if (!this.multiMap) {
+            throw new Error('Room has no MultiMap!')
+        }
+
+        const itemInfo = this.multiMap.find(value => value.location === location && value.from === playerId)
+        if (!itemInfo) {
+            throw new Error(`Player ${playerId} should not have a dummy item at location ${location}.`)
+        }
+
+        return itemInfo
+    }
+
+    sendItem(itemInfo: KH2ItemMessage) {
+        const client = this.clients.find(c => c.playerId === itemInfo.to)
+        if (!client) {
+            throw new Error(`No player with playerId ${itemInfo.to} in room!`)
+        }
+
+        client.socket.send(JSON.stringify({
+            type: 'MULTI',
+            action: 'ITEM',
+            data: {
+                item: itemInfo
+            }
+        } as Message))
     }
 }

@@ -4,6 +4,7 @@ import { Room } from '../Room'
 import { Client } from '../Client'
 import { Message, MessageData } from '../index'
 import { MultiMap } from '../types/MultiMap'
+import { KH2ItemMessage } from '../types/KH2ItemMessage'
 
 // MOCKS ==========
 
@@ -390,7 +391,7 @@ describe('Multiworld', () => {
         })
     })
 
-    describe('loadMultiMap', () => {
+    describe('loadMultiMap()', () => {
         let mw: Multiworld
         let roomId: string
         let multiMap: MultiMap
@@ -430,6 +431,70 @@ describe('Multiworld', () => {
                     message: 'Could not load MultiMap. Room does not exist.'
                 }
             })
+        })
+    })
+
+    describe('handleItem()', () => {
+        let mw: Multiworld
+        let roomId: string
+        let sender: Client
+
+        beforeEach(() => {
+            mw = new Multiworld()
+            sender = new Client(0, new WebSocket(''))
+            const response = mw.createRoom(sender)
+            roomId = response.data.roomId as string
+
+            const receiver = new Client(1, new WebSocket(''))
+            mw.joinRoom(roomId, receiver)
+        })
+
+        // TODO: Eventually implement something with these? Tracker or otherwise?
+        it('should ignore everything that isn\'t a dummy item', () => {
+            const messageToClient = mw.handleItem({ name: 'fire', location: '' } as KH2ItemMessage, sender)
+
+            expect(messageToClient).toHaveProperty('type')
+            expect(messageToClient.type).toEqual('MULTI')
+            expect(messageToClient).toHaveProperty('action')
+            expect(messageToClient.action).toEqual('ITEM')
+            expect(messageToClient).toHaveProperty('data')
+            expect(messageToClient.data).not.toHaveProperty('error')
+            expect(messageToClient.data).toHaveProperty('message')
+            expect(messageToClient.data.message).toContain<string>('not yet implemented')
+        })
+
+        it('should return an error if no multimap has been loaded', () => {
+            const messageToClient = mw.handleItem({ name: 'dummy 14', location: 'a' } as KH2ItemMessage, sender)
+
+            expect(messageToClient).toStrictEqual<Message>({
+                type: 'MULTI',
+                action: 'ITEM',
+                data: {
+                    error: true,
+                    message: 'Could not send item. Room has no MultiMap!'
+                }
+            })
+        })
+
+        it('should parse dummy items for multiworld interaction', () => {
+            const multiMap = [
+                { name: 'fire', location: 'a', 'to': 1, 'from': 0 },
+                { name: 'blizzard', location: 'b', 'to': 0, 'from': 1 },
+            ]
+
+            mw.loadMultiMap(multiMap, roomId)
+
+            const messageToClient = mw.handleItem({ name: 'dummy 14', location: 'a' } as KH2ItemMessage, sender)
+
+            expect(messageToClient).toHaveProperty('type')
+            expect(messageToClient.type).toEqual('MULTI')
+            expect(messageToClient).toHaveProperty('action')
+            expect(messageToClient.action).toEqual('ITEM')
+            expect(messageToClient).toHaveProperty('data')
+            expect(messageToClient.data).toHaveProperty('message')
+            expect(messageToClient.data.message).toContain<string>('fire')
+            expect(messageToClient.data.message).toContain<string>('to Player 1')
+            expect(messageToClient.data.message).toContain<string>('success')
         })
     })
 })

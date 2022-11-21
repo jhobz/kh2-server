@@ -17,9 +17,9 @@ export interface KH2ItemMessage {
   /**
    * The player from which the item was collected.
    */
-  from?: string;
+  from?: number;
   /**
    * The player to whom the item was sent.
    */
-  to?: string;
+  to?: number;
 }

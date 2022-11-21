@@ -1,9 +1,10 @@
 {
-    "$id": "MultiMap.schema.json",
-    "$schema": "https://json-schema.org/draft-07/schema",
+    "$id": "https://possiblybad.com/schemas/MultiMap.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema",
     "title": "MultiMap",
     "type": "array",
     "items": {
+        "type": "object",
         "properties": {
             "name": {
                 "type": "string",
