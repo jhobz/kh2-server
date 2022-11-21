@@ -1,10 +1,9 @@
+import { WebSocket } from 'ws'
+import { Client } from './Client.js'
 import { Message } from './index.js'
-import { Room, Client } from './Room.js'
-import { customAlphabet } from 'nanoid'
-import nanoidDict from 'nanoid-dictionary'
-const { nolookalikesSafe } = nanoidDict
-
-const generateId = customAlphabet(nolookalikesSafe, 6)
+import { Room } from './Room.js'
+import { KH2ItemMessage } from './types/KH2ItemMessage.js'
+import { MultiMap } from './types/MultiMap.js'
 
 export class Multiworld {
     maxClients: number
@@ -18,7 +17,7 @@ export class Multiworld {
         this.connectedClients = []
     }
 
-    authenticateClient(message: Message): Message {
+    authenticateClient(message: Message, socket: WebSocket): Message {
         if (!message.data.hasOwnProperty('playerId')) {
             throw new Error('Could not authenticate client. A playerId is required.')
         }
@@ -27,8 +26,8 @@ export class Multiworld {
             throw new Error('Could not authenticate client. The \'playerId\' field is not a number.')
         }
 
-        const client: any = { playerId: message.data.playerId }
-        client.clientId = generateId()
+        // const client: any = { playerId: message.data.playerId }
+        const client = new Client(message.data.playerId, socket)
         this.connectedClients.push(client)
 
         return {
@@ -58,13 +57,26 @@ export class Multiworld {
     }
 
     joinRoom(roomId: string, client: Client): Message {
-        if (!Object.keys(this.rooms).includes(roomId)) {
+        if (!roomId) {
             return {
                 type: 'MULTI',
                 action: 'JOIN_ROOM',
                 data: {
                     error: true,
-                    message: `Unable to join room. ${roomId ? `Room '${roomId}' does not exist.` : 'No roomId provided.'}`,
+                    message: 'Unable to join room. No roomId provided.'
+                }
+            }
+        }
+
+        const room = this.rooms[roomId]
+
+        if (!room) {
+            return {
+                type: 'MULTI',
+                action: 'JOIN_ROOM',
+                data: {
+                    error: true,
+                    message: `Unable to join room. Room '${roomId}' does not exist.`
                 }
             }
         }
@@ -74,7 +86,7 @@ export class Multiworld {
         }
 
         try {
-            client.roomId = this.rooms[roomId].add(client)
+            client.roomId = room.add(client)
         } catch (e: any) {
             return {
                 type: 'MULTI',
@@ -148,7 +160,8 @@ export class Multiworld {
     }
 
     removeClient(client: Client): Message {
-        if (!this.hasClient(client)) {
+        const index = this.connectedClients.indexOf(client)
+        if (index < 0) {
             return {
                 type: 'MULTI',
                 action: 'LOGOUT',
@@ -166,7 +179,7 @@ export class Multiworld {
             }
         }
 
-        this.connectedClients.splice(this.connectedClients.indexOf(this.hasClient(client) as Client), 1)
+        this.connectedClients.splice(index, 1)
 
         return {
             type: 'MULTI',
@@ -179,5 +192,92 @@ export class Multiworld {
 
     hasClient(client: Client): Client | undefined {
         return this.connectedClients.find(c => c.clientId === client.clientId)
+    }
+
+    getClientById(clientId: string): Client | undefined {
+        return this.connectedClients.find(c => c.clientId === clientId)
+    }
+
+    loadMultiMap(map: MultiMap, roomId: string): Message {
+        const room = this.rooms[roomId]
+
+        if (!room) {
+            return {
+                type: 'MULTI',
+                action: 'LOAD_MULTI_MAP',
+                data: {
+                    error: true,
+                    message: 'Could not load MultiMap. Room does not exist.'
+                }
+            }
+        }
+
+        room.setMultiMap(map)
+
+        return {
+            type: 'MULTI',
+            action: 'LOAD_MULTI_MAP',
+            data: {
+                message: `MultiMap loaded into room '${roomId}' successfully.`
+            }
+        }
+    }
+
+    handleItem(item: KH2ItemMessage, client: Client): Message {
+        // TODO: Split KH2 item strings out to their own enum
+        if (item.name !== 'dummy 14') {
+            return {
+                type: 'MULTI',
+                action: 'ITEM',
+                data: {
+                    message: 'Non-multiworld item tracking not yet implemented.'
+                }
+            }
+        }
+
+        if (!client.roomId) {
+            return {
+                type: 'MULTI',
+                action: 'ITEM',
+                data: {
+                    error: true,
+                    message: 'Could not send item. User is not in a room.'
+                }
+            }
+        }
+        const room = this.rooms[client.roomId]
+        if (!room) {
+            return {
+                type: 'MULTI',
+                action: 'ITEM',
+                data: {
+                    error: true,
+                    message: 'Could not send item. Specified room does not exist.'
+                }
+            }
+        }
+
+        let itemInfo: KH2ItemMessage
+        try {
+            itemInfo = room.getItemInfo(item.location, client.playerId) // KH2ItemMessage
+            room.sendItem(itemInfo)
+        } catch (e: any) {
+            return {
+                type: 'MULTI',
+                action: 'ITEM',
+                data: {
+                    error: true,
+                    message: `Could not send item. ${e.message}`
+                }
+            }
+        }
+
+        return {
+            type: 'MULTI',
+            action: 'ITEM',
+            data: {
+                message: `Sent ${itemInfo.name} to Player ${itemInfo.to} successfully.`
+            }
+        }
     }
 }

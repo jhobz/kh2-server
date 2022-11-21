@@ -1,0 +1,29 @@
+{
+    "$id": "https://possiblybad.com/schemas/MultiMap.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "title": "MultiMap",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The name of the item."
+            },
+            "location": {
+                "type": "string",
+                "description": "The location ID at which the item was collected."
+            },
+            "from": {
+                "type": "number",
+                "description": "The ID of the player from which this item can be collected."
+            },
+            "to": {
+                "type": "number",
+                "description": "The ID of the player to whom this item should be sent."
+            }
+        },
+        "additionalProperties": false,
+        "required": ["name", "location", "from", "to"]
+    }
+}

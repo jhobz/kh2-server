@@ -1,36 +1,14 @@
-// import WebSocket from 'ws'
+import { WebSocket } from 'ws'
 import { Multiworld } from '../Multiworld'
-import { Room, Client } from '../Room'
+import { Room } from '../Room'
+import { Client } from '../Client'
 import { Message, MessageData } from '../index'
-// import { customAlphabet } from 'nanoid'
+import { MultiMap } from '../types/MultiMap'
+import { KH2ItemMessage } from '../types/KH2ItemMessage'
 
 // MOCKS ==========
-// jest.mock('ws')
-// jest.mock('nanoid', () => {
-//     // Ok, obviously this is gross as fuck. But jest is really dumb and doesn't actually
-//     // clear mocks in modules when you use .clearAllMocks or .mockClear. IT DOES RESET THEM
-//     // IF YOU USE RESET, but it won't clear. It's extremely frustrating, but this was legitimately
-//     // the best solution here.
-//     const mockFn = jest.fn(() => 'qwerty')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//         .mockImplementationOnce(() => 'asdfgh')
-//     return {
-//         __esModule: true,
-//         customAlphabet: jest.fn(() => {
-//             return mockFn
-//         })
-//     }
-// })
+
+jest.mock('ws')
 
 // TESTS ==========
 
@@ -50,32 +28,26 @@ describe('Multiworld', () => {
     describe('authenticateClient()', () => {
         let mw: Multiworld
         let message: Message
-        // let socket: WebSocket
+        let socket: WebSocket
 
         beforeEach(() => {
             mw = new Multiworld(4)
-            message = { type: "MULTI", action: "LOGIN", data: { playerId: 0 } }
-            // socket = new WebSocket('') 
+            message = { type: 'MULTI', action: 'LOGIN', data: { playerId: 0 } }
+            socket = new WebSocket('') 
         })
 
         it('should require a playerId', () => {
             delete message.data.playerId
-            expect(() => mw.authenticateClient(message)).toThrow('Could not authenticate client. A playerId is required.')
+            expect(() => mw.authenticateClient(message, socket)).toThrow('Could not authenticate client. A playerId is required.')
         })
 
         it('should require playerId to be a number', () => {
             message.data.playerId = 'string' as any
-            expect(() => mw.authenticateClient(message)).toThrow('Could not authenticate client. The \'playerId\' field is not a number.')
-        })
-
-        it('should assign a clientId to the client', () => {
-            mw.authenticateClient(message)
-            expect(mw.connectedClients[0]).toHaveProperty('clientId')
-            expect(mw.connectedClients[0].clientId).not.toEqual('')
+            expect(() => mw.authenticateClient(message, socket)).toThrow('Could not authenticate client. The \'playerId\' field is not a number.')
         })
 
         it('should return a message on success', () => {
-            const messageToClient = mw.authenticateClient(message)
+            const messageToClient = mw.authenticateClient(message, socket)
             expect(messageToClient).toHaveProperty('type')
             expect(messageToClient.type).toEqual('MULTI')
             expect(messageToClient).toHaveProperty('action')
@@ -89,12 +61,9 @@ describe('Multiworld', () => {
 
         it('should store the client in the list of connected clients', () => {
             expect(mw.connectedClients).toHaveLength(0)
-            const response = mw.authenticateClient(message)
+            const response = mw.authenticateClient(message, socket)
             expect(mw.connectedClients).toHaveLength(1)
-            expect(mw.connectedClients).toContainEqual({
-                clientId: (response.data.client as Client).clientId,
-                playerId: message.data.playerId
-            })
+            expect(mw.hasClient(response.data.client as Client)).toBeTruthy()
         })
 
         it.todo('should not allow more clients than the maximum number')
@@ -106,10 +75,7 @@ describe('Multiworld', () => {
 
         beforeEach(() => {
             mw = new Multiworld(4)
-            client = {
-                clientId: 'a',
-                playerId: 0
-            }
+            client = new Client(0, new WebSocket(''))
         })
 
         it('should create a new Room and keep track of its id', () => {
@@ -124,7 +90,7 @@ describe('Multiworld', () => {
         })
 
         it('should add the roomId to the client object', () => {
-            expect(client).not.toHaveProperty('roomId')
+            expect(client.roomId).toBeUndefined()
             mw.createRoom(client)
             expect(client).toHaveProperty('roomId')
             expect(client.roomId).toHaveLength(6)
@@ -152,17 +118,14 @@ describe('Multiworld', () => {
 
         beforeEach(() => {
             mw = new Multiworld(4)
-            existingClient = {
-                clientId: 'a',
-                playerId: 0
-            }
+            existingClient = new Client(0, new WebSocket(''))
 
             const response = mw.createRoom(existingClient)
             roomId = response.data.roomId as string
         })
 
         it('should place the client in a matching room', () => {
-            const client = { clientId: 'b', playerId: 1 }
+            const client = new Client(1, new WebSocket(''))
             expect(mw.rooms[roomId].clients).toHaveLength(1)
             expect(mw.rooms[roomId].clients).not.toContain(client)
 
@@ -173,7 +136,7 @@ describe('Multiworld', () => {
         })
 
         it('should return a successful message to the client', () => {
-            const client = { clientId: 'b', playerId: 1 }
+            const client = new Client(1, new WebSocket(''))
             const messageToClient = mw.joinRoom(roomId, client)
 
             expect(messageToClient).toHaveProperty('type')
@@ -186,7 +149,7 @@ describe('Multiworld', () => {
         })
 
         it('should return an unsuccessful message if there is no roomId', () => {
-            const client = { clientId: 'b', playerId: 1 }
+            const client = new Client(1, new WebSocket(''))
             const messageToClient = mw.joinRoom('', client)
 
             expect(messageToClient).toStrictEqual<Message>({
@@ -200,17 +163,17 @@ describe('Multiworld', () => {
         })
 
         it('should not move the client if the room doesn\'t exist', () => {
-            const client = { clientId: 'b', playerId: 1 }
+            const client = new Client(1, new WebSocket(''))
             expect(mw.rooms).not.toHaveProperty('asdf')
 
             mw.joinRoom('asdf', client)
-            expect(client).not.toHaveProperty('roomId')
+            expect(client.roomId).toBeUndefined()
             expect(Object.keys(mw.rooms)).toHaveLength(1)
             expect(mw.rooms).not.toHaveProperty('asdf')
         })
 
         it('should return an unsuccessful message if the room doesn\'t exist', () => {
-            const client = { clientId: 'b', playerId: 1 }
+            const client = new Client(1, new WebSocket(''))
             expect(mw.rooms).not.toHaveProperty('asdf')
 
             const messageToClient = mw.joinRoom('asdf', client)
@@ -225,25 +188,25 @@ describe('Multiworld', () => {
         })
 
         it('should gracefully handle errors thrown by Room', () => {
-            const client = { clientId: 'b', playerId: 0 }
+            const client = new Client(0, new WebSocket(''))
             const fn = () => mw.joinRoom(roomId, client)
             expect(fn).not.toThrowError()
             expect(fn().data.error).toBe(true)
         })
 
         it('should fail to join if another client exists with the same playerId in the room', () => {
-            const client = { clientId: 'b', playerId: 0 }
+            const client = new Client(0, new WebSocket(''))
             expect(mw.rooms[roomId].clients).toHaveLength(1)
             expect(mw.rooms[roomId].clients).not.toContain(client)
 
             mw.joinRoom(roomId, client)
-            expect(client).not.toHaveProperty('roomId')
+            expect(client.roomId).toBeUndefined()
             expect(mw.rooms[roomId].clients).toHaveLength(1)
             expect(mw.rooms[roomId].clients).not.toContain(client)
         })
 
         it('should return an unsuccessful message if another client exists with the same playerId in the room', () => {
-            const client = { clientId: 'b', playerId: 0 }
+            const client = new Client(0, new WebSocket(''))
             const messageToClient = mw.joinRoom(roomId, client)
             expect(messageToClient).toStrictEqual<Message>({
                 type: 'MULTI',
@@ -257,12 +220,12 @@ describe('Multiworld', () => {
 
         it('should move the client from one room to another if it is already in one', () => {
             // Add another client so that the room still exists after one client leaves
-            mw.joinRoom(roomId, { clientId: 'b', playerId: 1 })
+            mw.joinRoom(roomId, new Client(1, new WebSocket('')))
 
             expect(existingClient.roomId).toBe(roomId)
             expect(mw.rooms[roomId].clients).toContain(existingClient)
 
-            const response = mw.createRoom({ clientId: 'c', playerId: 1 })
+            const response = mw.createRoom(new Client(1, new WebSocket('')))
             const secondRoomId = response.data.roomId as string
 
             mw.joinRoom(secondRoomId, existingClient)
@@ -282,14 +245,8 @@ describe('Multiworld', () => {
 
         beforeEach(() => {
             mw = new Multiworld(4)
-            firstClient = {
-                clientId: 'a',
-                playerId: 0
-            }
-            secondClient = {
-                clientId: 'b',
-                playerId: 1
-            }
+            firstClient = new Client(0, new WebSocket(''))
+            secondClient = new Client(1, new WebSocket(''))
 
             const response = mw.createRoom(firstClient)
             roomId = response.data.roomId as string
@@ -385,14 +342,14 @@ describe('Multiworld', () => {
 
         beforeEach(() => {
             mw = new Multiworld(4)
-            const message: Message = { type: "MULTI", action: "LOGIN", data: { playerId: 0 } }
-            client = (mw.authenticateClient(message)).data.client as Client
+            const authMessage = mw.authenticateClient({ type: 'MULTI', action: 'LOGIN', data: { playerId: 0 } } as Message, new WebSocket(''))
+            client = authMessage.data.client as Client
             const response = mw.createRoom(client)
             roomId = response.data.roomId as string
         })
 
         it('should remove the client from a room if it is in one', () => {
-            expect(mw.connectedClients).toContain(client)
+            expect(mw.hasClient(client)).toBeTruthy()
             expect(mw.rooms[roomId].clients).toContain(client)
 
             mw.removeClient(client)
@@ -431,6 +388,113 @@ describe('Multiworld', () => {
                     message: 'User not in list of connected clients.'
                 }
             })
+        })
+    })
+
+    describe('loadMultiMap()', () => {
+        let mw: Multiworld
+        let roomId: string
+        let multiMap: MultiMap
+
+        beforeEach(() => {
+            mw = new Multiworld()
+            const client = new Client(0, new WebSocket(''))
+            const response = mw.createRoom(client)
+            roomId = response.data.roomId as string
+
+            multiMap = [
+                { name: 'fire', location: 'a', 'to': 1, 'from': 0 },
+                { name: 'blizzard', location: 'b', 'to': 0, 'from': 1 },
+            ]
+        })
+
+        it('should return a successful message upon loading', () => {
+            const messageToClient = mw.loadMultiMap(multiMap, roomId)
+
+            expect(messageToClient).toHaveProperty('type')
+            expect(messageToClient.type).toEqual('MULTI')
+            expect(messageToClient).toHaveProperty('action')
+            expect(messageToClient.action).toEqual('LOAD_MULTI_MAP')
+            expect(messageToClient).toHaveProperty('data')
+            expect(messageToClient.data).toHaveProperty('message')
+            expect(messageToClient.data.message).toContain<string>('success')
+        })
+
+        it('should return an unsuccessful message if the room doesn\'t exist', () => {
+            const messageToClient = mw.loadMultiMap(multiMap, 'asdf')
+
+            expect(messageToClient).toStrictEqual<Message>({
+                type: 'MULTI',
+                action: 'LOAD_MULTI_MAP',
+                data: {
+                    error: true,
+                    message: 'Could not load MultiMap. Room does not exist.'
+                }
+            })
+        })
+    })
+
+    describe('handleItem()', () => {
+        let mw: Multiworld
+        let roomId: string
+        let sender: Client
+
+        beforeEach(() => {
+            mw = new Multiworld()
+            sender = new Client(0, new WebSocket(''))
+            const response = mw.createRoom(sender)
+            roomId = response.data.roomId as string
+
+            const receiver = new Client(1, new WebSocket(''))
+            mw.joinRoom(roomId, receiver)
+        })
+
+        // TODO: Eventually implement something with these? Tracker or otherwise?
+        it('should ignore everything that isn\'t a dummy item', () => {
+            const messageToClient = mw.handleItem({ name: 'fire', location: '' } as KH2ItemMessage, sender)
+
+            expect(messageToClient).toHaveProperty('type')
+            expect(messageToClient.type).toEqual('MULTI')
+            expect(messageToClient).toHaveProperty('action')
+            expect(messageToClient.action).toEqual('ITEM')
+            expect(messageToClient).toHaveProperty('data')
+            expect(messageToClient.data).not.toHaveProperty('error')
+            expect(messageToClient.data).toHaveProperty('message')
+            expect(messageToClient.data.message).toContain<string>('not yet implemented')
+        })
+
+        it('should return an error if no multimap has been loaded', () => {
+            const messageToClient = mw.handleItem({ name: 'dummy 14', location: 'a' } as KH2ItemMessage, sender)
+
+            expect(messageToClient).toStrictEqual<Message>({
+                type: 'MULTI',
+                action: 'ITEM',
+                data: {
+                    error: true,
+                    message: 'Could not send item. Room has no MultiMap!'
+                }
+            })
+        })
+
+        it('should parse dummy items for multiworld interaction', () => {
+            const multiMap = [
+                { name: 'fire', location: 'a', 'to': 1, 'from': 0 },
+                { name: 'blizzard', location: 'b', 'to': 0, 'from': 1 },
+            ]
+
+            mw.loadMultiMap(multiMap, roomId)
+
+            const messageToClient = mw.handleItem({ name: 'dummy 14', location: 'a' } as KH2ItemMessage, sender)
+
+            expect(messageToClient).toHaveProperty('type')
+            expect(messageToClient.type).toEqual('MULTI')
+            expect(messageToClient).toHaveProperty('action')
+            expect(messageToClient.action).toEqual('ITEM')
+            expect(messageToClient).toHaveProperty('data')
+            expect(messageToClient.data).toHaveProperty('message')
+            expect(messageToClient.data.message).toContain<string>('fire')
+            expect(messageToClient.data.message).toContain<string>('to Player 1')
+            expect(messageToClient.data.message).toContain<string>('success')
         })
     })
 })

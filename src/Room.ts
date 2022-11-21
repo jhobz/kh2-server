@@ -1,6 +1,9 @@
 import { customAlphabet } from 'nanoid'
 import nanoidDict from 'nanoid-dictionary'
-import { WebSocket } from 'ws'
+import { Client } from './Client.js'
+import { Message } from './index.js'
+import { KH2ItemMessage } from './types/KH2ItemMessage.js'
+import { MultiMap } from './types/MultiMap.js'
 const { nolookalikesSafe } = nanoidDict
 
 const generateId = customAlphabet(nolookalikesSafe, 6)
@@ -9,6 +12,7 @@ export class Room {
     id: string
     maxClients: number | undefined
     clients: Client[]
+    multiMap: MultiMap | undefined
 
     constructor(initialClients: Client[], maxClients?: number) {
         this.id = generateId()
@@ -37,10 +41,39 @@ export class Room {
     containsClient(client: Client) {
         return this.clients.find(c => c.clientId === client.clientId)
     }
-}
 
-export interface Client {
-    clientId: string
-    playerId: number
-    roomId?: string
+
+    // Multiworld item stuff ----------------
+
+    setMultiMap(multiMap: MultiMap) {
+        this.multiMap = multiMap
+    }
+
+    getItemInfo(location: string, playerId: number): KH2ItemMessage {
+        if (!this.multiMap) {
+            throw new Error('Room has no MultiMap!')
+        }
+
+        const itemInfo = this.multiMap.find(value => value.location === location && value.from === playerId)
+        if (!itemInfo) {
+            throw new Error(`Player ${playerId} should not have a dummy item at location ${location}.`)
+        }
+
+        return itemInfo
+    }
+
+    sendItem(itemInfo: KH2ItemMessage) {
+        const client = this.clients.find(c => c.playerId === itemInfo.to)
+        if (!client) {
+            throw new Error(`No player with playerId ${itemInfo.to} in room!`)
+        }
+
+        client.socket.send(JSON.stringify({
+            type: 'MULTI',
+            action: 'ITEM',
+            data: {
+                item: itemInfo
+            }
+        } as Message))
+    }
 }
