@@ -2,6 +2,7 @@
 import { Multiworld } from '../Multiworld'
 import { Room, Client } from '../Room'
 import { Message, MessageData } from '../index'
+import { MultiMap } from '../types/MultiMap'
 // import { customAlphabet } from 'nanoid'
 
 // MOCKS ==========
@@ -429,6 +430,50 @@ describe('Multiworld', () => {
                 data: {
                     error: true,
                     message: 'User not in list of connected clients.'
+                }
+            })
+        })
+    })
+
+    describe('loadMultiMap', () => {
+        let mw: Multiworld
+        let roomId: string
+        let multiMap: MultiMap
+
+        beforeEach(() => {
+            mw = new Multiworld()
+            const message: Message = { type: "MULTI", action: "LOGIN", data: { playerId: 0 } }
+            const client = (mw.authenticateClient(message)).data.client as Client
+            const response = mw.createRoom(client)
+            roomId = response.data.roomId as string
+
+            multiMap = [
+                { name: 'fire', location: 'a', 'to': 1, 'from': 0 },
+                { name: 'blizzard', location: 'b', 'to': 0, 'from': 1 },
+            ]
+        })
+
+        it('should return a successful message upon loading', () => {
+            const messageToClient = mw.loadMultiMap(multiMap, roomId)
+
+            expect(messageToClient).toHaveProperty('type')
+            expect(messageToClient.type).toEqual('MULTI')
+            expect(messageToClient).toHaveProperty('action')
+            expect(messageToClient.action).toEqual('LOAD_MULTI_MAP')
+            expect(messageToClient).toHaveProperty('data')
+            expect(messageToClient.data).toHaveProperty('message')
+            expect(messageToClient.data.message).toContain<string>('success')
+        })
+
+        it('should return an unsuccessful message if the room doesn\'t exist', () => {
+            const messageToClient = mw.loadMultiMap(multiMap, 'asdf')
+
+            expect(messageToClient).toStrictEqual<Message>({
+                type: 'MULTI',
+                action: 'LOAD_MULTI_MAP',
+                data: {
+                    error: true,
+                    message: 'Could not load MultiMap. Room does not exist.'
                 }
             })
         })

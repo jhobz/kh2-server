@@ -2,6 +2,7 @@ import { Message } from './index.js'
 import { Room, Client } from './Room.js'
 import { customAlphabet } from 'nanoid'
 import nanoidDict from 'nanoid-dictionary'
+import { MultiMap } from './types/MultiMap.js'
 const { nolookalikesSafe } = nanoidDict
 
 const generateId = customAlphabet(nolookalikesSafe, 6)
@@ -180,4 +181,34 @@ export class Multiworld {
     hasClient(client: Client): Client | undefined {
         return this.connectedClients.find(c => c.clientId === client.clientId)
     }
+
+    loadMultiMap(map: MultiMap, roomId: string): Message {
+        const room = this.rooms[roomId]
+
+        if (!room) {
+            return {
+                type: 'MULTI',
+                action: 'LOAD_MULTI_MAP',
+                data: {
+                    error: true,
+                    message: 'Could not load MultiMap. Room does not exist.'
+                }
+            }
+        }
+
+        room.setMultiMap(map)
+
+        return {
+            type: 'MULTI',
+            action: 'LOAD_MULTI_MAP',
+            data: {
+                message: `MultiMap loaded into room '${roomId}' successfully.`
+            }
+        }
+    }
+
+    // parseAndSendItem
+    //  client = room.determineRecipientOfItem()
+    //  client.send(KH2ItemMessage) // client who receives the item
+    //  return KH2ItemMessage to client who sent the item
 }

@@ -1,0 +1,6 @@
+{
+    "items": [
+        { "name": "fire", "location": "a", "to": 1, "from": 0 },
+        { "name": "blizzard", "location": "b", "to": 0, "from": 1 }
+    ]
+}

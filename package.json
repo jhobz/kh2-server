@@ -7,6 +7,7 @@
   "scripts": {
     "start": "nodemon dist/index.js",
     "build": "tsc",
+    "schema": "json2ts",
     "test": "jest",
     "test-dev": "jest --watchAll --verbose",
     "watch": "tsc --watch"
@@ -29,10 +30,12 @@
     "@types/nanoid-dictionary": "^4.2.0",
     "@types/ws": "^8.5.3",
     "jest": "^28.1.3",
+    "json-schema-to-typescript": "^11.0.2",
     "nodemon": "^2.0.19",
     "ts-jest": "^28.0.7"
   },
   "dependencies": {
+    "ajv": "^8.11.2",
     "express": "^4.18.1",
     "nanoid": "^4.0.0",
     "nanoid-dictionary": "^4.3.0",

@@ -2,11 +2,15 @@
 import WebSocket, { WebSocketServer } from 'ws'
 import { Client } from './Room.js'
 import { Multiworld } from './Multiworld.js'
-// import Multiworld from './Multiworld'
+import { MultiMap } from './types/MultiMap.js'
+import ajv from 'ajv'
+import * as MultiMapSchema from './schemas/MultiMap.schema.json' assert { type: 'json' }
+
+const validateMultiMap = new ajv.default({ allErrors: true }).compile<MultiMap>(MultiMapSchema)
 
 // const app = express()
 const port = 3000 // TODO: process.env.PORT
-const server = new WebSocketServer({ port,  })
+const server = new WebSocketServer({ port, })
 const mw = new Multiworld(64)
 
 server.on('connection', socket => {
@@ -20,7 +24,7 @@ server.on('connection', socket => {
 
 export interface Message {
     type: 'MULTI' | 'OTHER' // 'OTHER' is yet to be implemented
-    action: 'LOGIN' | 'LOGOUT' | 'JOIN_ROOM' | 'LEAVE_ROOM' | 'CREATE_ROOM' | 'ITEM'
+    action: 'LOGIN' | 'LOGOUT' | 'JOIN_ROOM' | 'LEAVE_ROOM' | 'CREATE_ROOM' | 'ITEM' | 'LOAD_MULTI_MAP'
     data: MessageData
 }
 
@@ -32,6 +36,7 @@ export interface MessageData {
     message?: string
     client?: Client
     roomId?: string
+    multiMap?: MultiMap
 }
 
 function handleMessage(message: Message, socket: WebSocket): Message {
@@ -52,6 +57,19 @@ function handleMessage(message: Message, socket: WebSocket): Message {
             return mw.joinRoom(message.data.roomId as string, message.data.client as Client)
         case 'LEAVE_ROOM':
             return mw.leaveRoom(message.data.client?.roomId as string, message.data.client as Client)
+        case 'LOAD_MULTI_MAP':
+            const multiMap = message.data.multiMap as MultiMap
+            if (validateMultiMap(multiMap)) {
+                return mw.loadMultiMap(multiMap, message.data.client?.roomId as string)
+            }
+            return {
+                type: 'MULTI',
+                action: 'LOAD_MULTI_MAP',
+                data: {
+                    error: true,
+                    message: 'Cannot load MultiMap. Map is not valid.'
+                }
+            }
         case 'ITEM':
             return {} as Message
         default:

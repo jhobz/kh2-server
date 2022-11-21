@@ -1,11 +1,13 @@
-const socket = new WebSocket('ws://https://1cfd5925-d99a-4fb4-9f59-abfbbef2330e.k8s.ondigitalocean.com')
+// const socket = new WebSocket('ws://https://1cfd5925-d99a-4fb4-9f59-abfbbef2330e.k8s.ondigitalocean.com')
+const socket = new WebSocket('ws://localhost:3000')
 const $ = {
     currentRoomInput: document.querySelector('#currentRoom'),
     newRoomInput: document.querySelector('#newRoom'),
     playerIdInput: document.querySelector('#playerId'),
     connectionButton: document.querySelector('#authorize'),
     createRoomButton: document.querySelector('#createRoom'),
-    joinRoomButton: document.querySelector('#joinRoom')
+    joinRoomButton: document.querySelector('#joinRoom'),
+    multiMapButton: document.querySelector('#loadMultiMap')
 }
 let client
 let isLoggedIn = false
@@ -34,6 +36,7 @@ socket.onmessage = ({ data }) => {
         $.createRoomButton.disabled = true
         $.joinRoomButton.disabled = true
         $.newRoomInput.disabled = true
+        $.multiMapButton.disabled = true
     }
 
     if (message.data.client) {
@@ -54,10 +57,12 @@ socket.onmessage = ({ data }) => {
 
         if (message.action === 'CREATE_ROOM' || message.action === 'JOIN_ROOM') {
             $.createRoomButton.innerHTML = 'Leave room'
+            $.multiMapButton.disabled = false
         }
 
         if (message.action === 'LEAVE_ROOM') {
             $.createRoomButton.innerHTML = 'Create room'
+            $.multiMapButton.disabled = true
         }
     }
 }
@@ -102,6 +107,25 @@ $.joinRoomButton.onclick = () => {
         action: 'JOIN_ROOM',
         data: {
             roomId: $.newRoomInput.value,
+            client
+        }
+    }
+    sendToServer(data)
+}
+
+$.multiMapButton.onclick = () => {
+    const multiMap = {
+        "items": [
+            { "name": "fire", "location": "a", "to": 1, "from": 0 },
+            { "name": "blizzard", "location": "b", "to": 0, "from": 1 }
+        ]
+    }
+
+    const data = {
+        type: 'MULTI',
+        action: 'LOAD_MULTI_MAP',
+        data: {
+            multiMap,
             client
         }
     }

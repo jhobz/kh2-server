@@ -1,6 +1,6 @@
 import { customAlphabet } from 'nanoid'
 import nanoidDict from 'nanoid-dictionary'
-import { WebSocket } from 'ws'
+import { MultiMap } from './types/MultiMap.js'
 const { nolookalikesSafe } = nanoidDict
 
 const generateId = customAlphabet(nolookalikesSafe, 6)
@@ -9,6 +9,7 @@ export class Room {
     id: string
     maxClients: number | undefined
     clients: Client[]
+    multiMap: MultiMap | undefined
 
     constructor(initialClients: Client[], maxClients?: number) {
         this.id = generateId()
@@ -36,6 +37,10 @@ export class Room {
 
     containsClient(client: Client) {
         return this.clients.find(c => c.clientId === client.clientId)
+    }
+
+    setMultiMap(multiMap: MultiMap) {
+        this.multiMap = multiMap
     }
 }
 

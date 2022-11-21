@@ -1,0 +1,26 @@
+{
+    "$id": "KH2Item.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "KH2 Item Message",
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string",
+            "description": "The name of the item."
+        },
+        "location": {
+            "type": "string",
+            "description": "The location ID at which the item was collected."
+        },
+        "from": {
+            "type": "string",
+            "description": "The player from which the item was collected."
+        },
+        "to": {
+            "type": "string",
+            "description": "The player to whom the item was sent."
+        }
+    },
+    "additionalProperties": false,
+    "required": ["name", "location"]
+}
